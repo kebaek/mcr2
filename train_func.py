@@ -15,14 +15,14 @@ import utils
 
 def load_architectures(name, dim):
     """Returns a network architecture.
-    
+
     Parameters:
         name (str): name of the architecture
         dim (int): feature dimension of vector presentation
-    
+
     Returns:
         net (torch.nn.Module)
-        
+
     """
     _name = name.lower()
     if _name == "resnet18":
@@ -60,7 +60,7 @@ def load_architectures(name, dim):
 
 def load_trainset(name, transform=None, train=True, path="./data/"):
     """Loads a dataset for training and testing. If augmentloader is used, transform should be None.
-    
+
     Parameters:
         name (str): name of the dataset
         transform (torchvision.transform): transform to be applied
@@ -82,16 +82,16 @@ def load_trainset(name, transform=None, train=True, path="./data/"):
     elif _name == "cifar100coarse":
         trainset = torchvision.datasets.CIFAR100(root=os.path.join(path, "cifar100"), train=train,
                                                  download=True, transform=transform)
-        trainset.targets = sparse2coarse(trainset.targets) 
+        trainset.targets = sparse2coarse(trainset.targets)
         trainset.num_classes = 20
     elif _name == "mnist":
-        trainset = torchvision.datasets.MNIST(root=os.path.join(path, "mnist"), train=train, 
+        trainset = torchvision.datasets.MNIST(root=os.path.join(path, "mnist"), train=train,
                                               download=True, transform=transform)
         trainset.num_classes = 10
     elif _name == "stl10":
-        trainset = torchvision.datasets.STL10(root=os.path.join(path, "stl10"), split='train', 
+        trainset = torchvision.datasets.STL10(root=os.path.join(path, "stl10"), split='train',
                                               transform=transform, download=True)
-        testset = torchvision.datasets.STL10(root=os.path.join(path, "stl10"), split='test', 
+        testset = torchvision.datasets.STL10(root=os.path.join(path, "stl10"), split='test',
                                              transform=transform, download=True)
         trainset.num_classes = 10
         testset.num_classes = 10
@@ -103,9 +103,9 @@ def load_trainset(name, transform=None, train=True, path="./data/"):
             trainset.targets = trainset.labels
             return trainset
     elif _name == "stl10sup":
-        trainset = torchvision.datasets.STL10(root=os.path.join(path, "stl10"), split='train', 
+        trainset = torchvision.datasets.STL10(root=os.path.join(path, "stl10"), split='train',
                                               transform=transform, download=True)
-        testset = torchvision.datasets.STL10(root=os.path.join(path, "stl10"), split='test', 
+        testset = torchvision.datasets.STL10(root=os.path.join(path, "stl10"), split='test',
                                              transform=transform, download=True)
         trainset.num_classes = 10
         testset.num_classes = 10
@@ -121,10 +121,10 @@ def load_trainset(name, transform=None, train=True, path="./data/"):
 
 def load_transforms(name):
     """Load data transformations.
-    
+
     Note:
         - Gaussian Blur is defined at the bottom of this file.
-    
+
     """
     _name = name.lower()
     if _name == "default":
@@ -145,7 +145,7 @@ def load_transforms(name):
                 transforms.RandomAffine((-90, 90)),
                 transforms.RandomAffine(0, translate=(0.2, 0.4)),
                 transforms.RandomAffine(0, scale=(0.8, 1.1)),
-                transforms.RandomAffine(0, shear=(-20, 20))]), 
+                transforms.RandomAffine(0, shear=(-20, 20))]),
                 GaussianBlur(kernel_size=3),
             transforms.ToTensor()])
     elif _name == "stl10":
@@ -175,18 +175,18 @@ def load_transforms(name):
 
 
 def load_checkpoint(model_dir, epoch=None, eval_=False):
-    """Load checkpoint from model directory. Checkpoints should be stored in 
+    """Load checkpoint from model directory. Checkpoints should be stored in
     `model_dir/checkpoints/model-epochX.ckpt`, where `X` is the epoch number.
-    
+
     Parameters:
         model_dir (str): path to model directory
         epoch (int): epoch number; set to None for last available epoch
         eval_ (bool): PyTorch evaluation mode. set to True for testing
-        
+
     Returns:
         net (torch.nn.Module): PyTorch checkpoint at `epoch`
         epoch (int): epoch number
-    
+
     """
     if epoch is None: # get last epoch
         ckpt_dir = os.path.join(model_dir, 'checkpoints')
@@ -203,10 +203,10 @@ def load_checkpoint(model_dir, epoch=None, eval_=False):
         net.eval()
     return net, epoch
 
-    
+
 def get_features(net, trainloader, verbose=True):
-    '''Extract all features out into one single batch. 
-    
+    '''Extract all features out into one single batch.
+
     Parameters:
         net (torch.nn.Module): get features using this model
         trainloader (torchvision.dataloader): dataloader for loading data
@@ -227,7 +227,7 @@ def get_features(net, trainloader, verbose=True):
         features.append(batch_features.cpu().detach())
         labels.append(batch_lbls)
     return torch.cat(features), torch.cat(labels)
-    
+
 
 def corrupt_labels(mode="default"):
     """Returns higher corder function"""

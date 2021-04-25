@@ -60,7 +60,7 @@ args = parser.parse_args()
 ## Pipelines Setup
 model_dir = os.path.join(args.save_dir,
                'sup_{}+{}_{}_epo{}_bs{}_lr{}_mom{}_wd{}_gam1{}_gam2{}_eps{}_lcr{}{}'.format(
-                    args.arch, args.fd, args.data, args.epo, args.bs, args.lr, args.mom, 
+                    args.arch, args.fd, args.data, args.epo, args.bs, args.lr, args.mom,
                     args.wd, args.gam1, args.gam2, args.eps, args.lcr, args.tail))
 utils.init_pipeline(model_dir)
 
