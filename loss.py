@@ -75,7 +75,7 @@ class MaximalCodingRateReduction(torch.nn.Module):
 
 class VariationalMaximalCodingRateReduction(torch.nn.Module):
     def __init__(self, gam1=1.0, gam2=1.0, eps=0.01, mu=1.0):
-        super(MaximalCodingRateReduction, self).__init__()
+        super(VariationalMaximalCodingRateReduction, self).__init__()
         self.gam1 = gam1
         self.gam2 = gam2
         self.eps = eps
@@ -88,13 +88,13 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         logdet = torch.logdet(I + self.gam1 * scalar * W.matmul(W.T))
         return logdet / 2.
 
-    def compute_compress_loss_empirical(self, net):
+    def compute_compress_loss_empirical(self, W, Pi, net):
         """Empirical Compressive Loss."""
         p, m = W.shape
         k, _, _ = Pi.shape
         I = torch.eye(p).cuda()
         compress_loss = 0.
-        A = net.A.weight
+        A = net.module.A.weight
         ones = torch.ones(A.shape[1])
         for j in range(k):
             trPi = torch.trace(Pi[j]) + 1e-8
@@ -103,13 +103,13 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
             compress_loss += log_det * trPi / m
         return compress_loss / 2.
 
-    def compute_matrix_approx(self, net):
+    def compute_matrix_approx(self, W, Pi, net):
         p, m = W.shape
         k, _, _ = Pi.shape
         I = torch.eye(p).cuda()
         matrix_loss = 0.
-        A = net.A.weight
-        U = net.U.weight
+        A = net.module.A.weight
+        U = net.module.U.weight
         for j in range(k):
             norm = torch.norm(W.matmul(Pi[j]).matmul(W.T) - U@torch.diag(A[j])@U.T)
             matrix_loss += norm**2
@@ -124,8 +124,8 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
 
         discrimn_loss_empi = self.compute_discrimn_loss_empirical(W)
-        compress_loss_empi = self.compute_compress_loss_empirical(net)
-        matrix_approx = self.compute_matrix_approx(W, net)
+        compress_loss_empi = self.compute_compress_loss_empirical(W, Pi, net)
+        matrix_approx = self.compute_matrix_approx(W, Pi, net)
 
         total_loss_empi = self.gam2 * -discrimn_loss_empi + compress_loss_empi + matrix_approx
         return (total_loss_empi,

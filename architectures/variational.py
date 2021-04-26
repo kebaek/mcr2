@@ -10,13 +10,12 @@ class ResNet50(torch.nn.Module):
     """ResNet50 with the softmax chopped off and the batchnorm frozen"""
     n_outputs = 2048
 
-    def __init__(self, r=512, fd=512, num_classes=10):
+    def __init__(self, dropout=0.1, r=512, fd=512, num_classes=10):
         super(ResNet50, self).__init__()
         # self.network = torchvision.models.resnet18(pretrained=True)
         self.network = torchvision.models.resnet50(pretrained=True)
         self.freeze_bn()
-        self.hparams = hparams
-        self.dropout = nn.Dropout(hparams['resnet_dropout'])
+        self.dropout = nn.Dropout(dropout)
         self.reshape = torch.nn.Sequential(
 	    nn.Linear(self.n_outputs,self.n_outputs, bias=False),
             nn.BatchNorm1d(self.n_outputs),
@@ -24,10 +23,10 @@ class ResNet50(torch.nn.Module):
             nn.Linear(self.n_outputs, self.n_outputs, bias=True),
             nn.BatchNorm1d(self.n_outputs),
             nn.ReLU(inplace=True),
-            nn.Linear(self.n_outputs, hparams['fd'], bias=True),
+            nn.Linear(self.n_outputs, fd, bias=True),
 	)
-        self.U = nn.Linear(hparams['fd'], hparams['r'])
-        self.A = nn.Linear(num_classes, hparams['r'])
+        self.U = nn.Linear(fd, r)
+        self.A = nn.Linear(num_classes, r)
 
     def forward(self, x):
         """Encode x into a feature vector of size n_outputs."""
@@ -42,14 +41,16 @@ class ResNet50(torch.nn.Module):
         x = self.network.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.dropout(x)
-        if self.hparams['fd'] != self.n_outputs:
-            x = self.reshape(x)
-            if self.hparams['norm'] == 1:
-                return F.normalize(x)
-            else:
-                return x
-        else:
-            return x
+        x = self.reshape(x)
+        return F.normalize(x)
+        # if self.fd != self.n_outputs:
+        #     x = self.reshape(x)
+        #     if self.hparams['norm'] == 1:
+        #         return F.normalize(x)
+        #     else:
+        #         return x
+        # else:
+        #     return x
 
     def train(self, mode=True):
         """

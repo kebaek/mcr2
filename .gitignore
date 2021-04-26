@@ -180,5 +180,13 @@ tags
 #
 ./data/*
 ./saved_models/*
+./scripts/*
 ./data/
 ./saved_models/
+./scripts/
+data/*
+saved_models/*
+scripts/*
+data/
+saved_models/
+scripts/

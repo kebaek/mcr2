@@ -13,7 +13,7 @@ from cluster import ElasticNetSubspaceClustering, clustering_accuracy
 import utils
 
 
-def load_architectures(name, dim):
+def load_architectures(name, dim, r=None):
     """Returns a network architecture.
 
     Parameters:
@@ -52,6 +52,9 @@ def load_architectures(name, dim):
     elif _name == "resnet10mnist":
         from architectures.resnet_mnist import ResNet10MNIST
         net = ResNet10MNIST(dim)
+    elif _name == "resnet50_variational":
+        from architectures.variational import ResNet50
+        net = ResNet50(r=r,fd=dim)
     else:
         raise NameError("{} not found in architectures.".format(name))
     net = torch.nn.DataParallel(net).cuda()
