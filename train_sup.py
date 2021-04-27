@@ -93,7 +93,7 @@ if args.variational:
 else:
     criterion = MaximalCodingRateReduction(gam1=args.gam1, gam2=args.gam2, eps=args.eps)
 optimizer1 = optim.SGD(net.parameters(), lr=args.lr, momentum=args.mom, weight_decay=args.wd)
-optimizer2 = optim.SGD([net.U.parameters(), net.A.parameters()], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
+optimizer2 = optim.SGD([net.module.U.parameters(), net.module.A.parameters()], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
 scheduler = lr_scheduler.MultiStepLR(optimizer, [200, 400, 600], gamma=0.1)
 utils.save_params(model_dir, vars(args))
 
@@ -111,16 +111,15 @@ if args.variational:
             Pi = tf.label_to_membership(batch_lbls.numpy(), trainset.num_classes)
             Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
             for inner_step in range(100):
-                loss = criterion.compute_matrix_approx(W, Pi, net)
+                matrix_loss = criterion.compute_matrix_approx(W, Pi, net)
                 optimizer2.zero_grad()
-                loss.backward()
+                matrix_loss.backward()
                 optimizer2.step()
-
 
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
         print('Epoch %d'%epoch)
         print('Total %f'%loss)
-        print('Approx %f'%loss_comp[2])
+        print('Approx %f'%matrix_loss)
         scheduler.step()
         utils.save_ckpt(model_dir, net, epoch)
 else:
