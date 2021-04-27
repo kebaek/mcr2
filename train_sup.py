@@ -105,7 +105,6 @@ if args.variational:
         for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
             features = net(batch_imgs.cuda())
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
-
             optimizer1.zero_grad()
 
             W = features.T
@@ -116,8 +115,10 @@ if args.variational:
             matrix_loss.backward(retain_graph=True)
             optimizer2.step()
 
+            net.module.U.weight.requires_grad = False
             loss.backward()
             optimizer1.step()
+            net.module.U.weight.requires_grad = True
 
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
         print('Epoch %d'%epoch)
