@@ -128,7 +128,5 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         matrix_approx = self.compute_matrix_approx(W, Pi, net)
 
         total_loss_empi = self.gam2 * -discrimn_loss_empi + compress_loss_empi + matrix_approx
-        print(total_loss_empi)
-        print(matrix_approx.item())
         return (total_loss_empi,
                 [discrimn_loss_empi.item(), compress_loss_empi.item(), matrix_approx.item()])

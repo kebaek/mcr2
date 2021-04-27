@@ -73,7 +73,7 @@ else:
                 'sup_{}+{}_{}_epo{}_bs{}_lr{}_mom{}_wd{}_gam1{}_gam2{}_eps{}_lcr{}{}'.format(
                         args.arch, args.fd, args.data, args.epo, args.bs, args.lr, args.mom,
                         args.wd, args.gam1, args.gam2, args.eps, args.lcr, args.tail))
-    
+
 utils.init_pipeline(model_dir)
 
 ## Prepare for Training
@@ -107,6 +107,9 @@ if args.variational:
             optimizer.step()
 
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
+        print('Epoch %d'%epoch)
+        print('Total %f'%loss)
+        print('Approx %f'%loss_comp[2])
         scheduler.step()
         utils.save_ckpt(model_dir, net, epoch)
 else:
