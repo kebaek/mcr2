@@ -74,7 +74,7 @@ class MaximalCodingRateReduction(torch.nn.Module):
                 [discrimn_loss_theo.item(), compress_loss_theo.item()])
 
 class VariationalMaximalCodingRateReduction(torch.nn.Module):
-    def __init__(self, gam1=1.0, gam2=1.0, eps=0.01, mu=1.0):
+    def __init__(self, gam1=1.0, gam2=1.0, eps=0.01, mu=0.1):
         super(VariationalMaximalCodingRateReduction, self).__init__()
         self.gam1 = gam1
         self.gam2 = gam2
