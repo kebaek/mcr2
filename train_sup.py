@@ -106,7 +106,7 @@ if args.variational:
             features = net(batch_imgs.cuda())
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
             optimizer1.zero_grad()
-            loss.backward()
+            loss.backward(retain_graph=True)
             optimizer1.step()
 
             W = features.T
