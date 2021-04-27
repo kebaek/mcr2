@@ -111,10 +111,13 @@ if args.variational:
             W = features.T
             Pi = tf.label_to_membership(batch_lbls.numpy(), trainset.num_classes)
             Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
-            for inner_step in range(100):
+            for inner_step in range(10):
                 matrix_loss = criterion.compute_matrix_approx(W, Pi, net)
                 optimizer2.zero_grad()
-                matrix_loss.backward(retain_graph=True)
+                if inner_step == 9:
+                    matrix_loss.backward()
+                else:
+                    matrix_loss.backward(retain_graph=True)
                 optimizer2.step()
 
             optimizer1.step()
