@@ -106,6 +106,8 @@ if args.variational:
             features = net(batch_imgs.cuda())
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
 
+            optimizer1.zero_grad()
+
             W = features.T
             Pi = tf.label_to_membership(batch_lbls.numpy(), trainset.num_classes)
             Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
@@ -114,11 +116,8 @@ if args.variational:
             matrix_loss.backward(retain_graph=True)
             optimizer2.step()
 
-            net.module.U.weight.requires_grad = False
-            optimizer1.zero_grad()
             loss.backward()
             optimizer1.step()
-            net.module.U.weight.requires_grad = True
 
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
         print('Epoch %d'%epoch)
