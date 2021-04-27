@@ -114,11 +114,11 @@ if args.variational:
             matrix_loss.backward(retain_graph=True)
             optimizer2.step()
 
-            for param in net.features.parameters():
-                print(param)
+            net.module.U.weight.requires_grad = False
             optimizer1.zero_grad()
             loss.backward()
             optimizer1.step()
+            net.module.U.weight.requires_grad = True
 
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
         print('Epoch %d'%epoch)
