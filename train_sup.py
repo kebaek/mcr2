@@ -94,7 +94,7 @@ if args.variational:
 else:
     criterion = MaximalCodingRateReduction(gam1=args.gam1, gam2=args.gam2, eps=args.eps)
 optimizer1 = optim.SGD(net.parameters(), lr=args.lr, momentum=args.mom, weight_decay=args.wd)
-optimizer2 = optim.SGD([net.module.U.weight, net.module.A.weight], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
+optimizer2 = optim.SGD([net.module.U.weight], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
 scheduler1 = lr_scheduler.MultiStepLR(optimizer1, [200, 400, 600], gamma=0.1)
 scheduler2 = lr_scheduler.MultiStepLR(optimizer2, [200, 400, 600], gamma=0.1)
 utils.save_params(model_dir, vars(args))
@@ -109,13 +109,13 @@ if args.variational:
             W = features.T
             Pi = tf.label_to_membership(batch_lbls.numpy(), trainset.num_classes)
             Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
-            for inner_step in range(10):
-                matrix_loss = criterion.compute_matrix_approx(W, Pi, net)
-                print(matrix_loss)
-                optimizer2.zero_grad()
-                matrix_loss.backward(retain_graph=True)
-                optimizer2.step()
+            matrix_loss = criterion.compute_matrix_approx(W, Pi, net)
+            optimizer2.zero_grad()
+            matrix_loss.backward(retain_graph=True)
+            optimizer2.step()
 
+            for param in net.features.parameters():
+                print(param)
             optimizer1.zero_grad()
             loss.backward()
             optimizer1.step()
