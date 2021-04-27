@@ -92,7 +92,8 @@ if args.variational:
     criterion = VariationalMaximalCodingRateReduction(gam1=args.gam1, gam2=args.gam2, eps=args.eps, mu=args.mu)
 else:
     criterion = MaximalCodingRateReduction(gam1=args.gam1, gam2=args.gam2, eps=args.eps)
-optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.mom, weight_decay=args.wd)
+optimizer1 = optim.SGD(net.parameters(), lr=args.lr, momentum=args.mom, weight_decay=args.wd)
+optimizer2 = optim.SGD([net.U.parameters(), net.A.parameters()], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
 scheduler = lr_scheduler.MultiStepLR(optimizer, [200, 400, 600], gamma=0.1)
 utils.save_params(model_dir, vars(args))
 
@@ -102,9 +103,19 @@ if args.variational:
         for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
             features = net(batch_imgs.cuda())
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
-            optimizer.zero_grad()
+            optimizer1.zero_grad()
             loss.backward()
-            optimizer.step()
+            optimizer1.step()
+
+            W = features.T
+            Pi = tf.label_to_membership(batch_lbls.numpy(), trainset.num_classes)
+            Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
+            for inner_step in range(100):
+                loss = criterion.compute_matrix_approx(W, Pi, net)
+                optimizer2.zero_grad()
+                loss.backward()
+                optimizer2.step()
+
 
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
         print('Epoch %d'%epoch)
