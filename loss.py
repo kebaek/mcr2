@@ -95,7 +95,7 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         I = torch.eye(p).cuda()
         compress_loss = 0.
         A = net.module.A.weight
-        ones = torch.ones(A.shape[1])
+        ones = torch.ones(A.shape[1]).cuda()
         for j in range(k):
             trPi = torch.trace(Pi[j]) + 1e-8
             scalar = p / (trPi * self.eps)
@@ -111,7 +111,7 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         A = net.module.A.weight
         U = net.module.U.weight
         for j in range(k):
-            norm = torch.norm(W.matmul(Pi[j]).matmul(W.T) - U@torch.diag(A[j])@U.T)
+            norm = torch.norm(W.matmul(Pi[j]).matmul(W.T) - U@torch.diag(A[:,j])@U.T)
             matrix_loss += norm**2
         return  self.mu * matrix_loss / 2.
 
