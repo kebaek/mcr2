@@ -93,7 +93,7 @@ if args.variational:
 else:
     criterion = MaximalCodingRateReduction(gam1=args.gam1, gam2=args.gam2, eps=args.eps)
 optimizer1 = optim.SGD(net.parameters(), lr=args.lr, momentum=args.mom, weight_decay=args.wd)
-optimizer2 = optim.SGD([net.module.U.parameters(), net.module.A.parameters()], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
+optimizer2 = optim.SGD([net.module.U.weight, net.module.A.weight], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
 scheduler = lr_scheduler.MultiStepLR(optimizer, [200, 400, 600], gamma=0.1)
 utils.save_params(model_dir, vars(args))
 
