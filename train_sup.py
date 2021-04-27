@@ -94,7 +94,8 @@ else:
     criterion = MaximalCodingRateReduction(gam1=args.gam1, gam2=args.gam2, eps=args.eps)
 optimizer1 = optim.SGD(net.parameters(), lr=args.lr, momentum=args.mom, weight_decay=args.wd)
 optimizer2 = optim.SGD([net.module.U.weight, net.module.A.weight], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
-scheduler = lr_scheduler.MultiStepLR(optimizer, [200, 400, 600], gamma=0.1)
+scheduler1 = lr_scheduler.MultiStepLR(optimizer1, [200, 400, 600], gamma=0.1)
+scheduler2 = lr_scheduler.MultiStepLR(optimizer2, [200, 400, 600], gamma=0.1)
 utils.save_params(model_dir, vars(args))
 
 ## Training
@@ -120,7 +121,8 @@ if args.variational:
         print('Epoch %d'%epoch)
         print('Total %f'%loss)
         print('Approx %f'%matrix_loss)
-        scheduler.step()
+        scheduler1.step()
+        scheduler2.step()
         utils.save_ckpt(model_dir, net, epoch)
 else:
     for epoch in range(args.epo):
