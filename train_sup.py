@@ -113,6 +113,7 @@ if args.variational:
             Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
             for inner_step in range(10):
                 matrix_loss = criterion.compute_matrix_approx(W, Pi, net)
+                print(matrix_loss)
                 optimizer2.zero_grad()
                 if inner_step == 9:
                     matrix_loss.backward()
