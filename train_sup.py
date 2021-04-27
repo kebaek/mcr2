@@ -107,6 +107,7 @@ if args.variational:
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
             optimizer1.zero_grad()
             loss.backward(retain_graph=True)
+            optimizer1.step()
 
             W = features.T
             Pi = tf.label_to_membership(batch_lbls.numpy(), trainset.num_classes)
@@ -121,7 +122,6 @@ if args.variational:
                     matrix_loss.backward(retain_graph=True)
                 optimizer2.step()
 
-            optimizer1.step()
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
         print('Epoch %d'%epoch)
         print('Total %f'%loss)
