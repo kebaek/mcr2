@@ -113,14 +113,11 @@ if args.variational:
                 matrix_loss = criterion.compute_matrix_approx(W, Pi, net)
                 print(matrix_loss)
                 optimizer2.zero_grad()
-                if inner_step == 9:
-                    matrix_loss.backward()
-                else:
-                    matrix_loss.backward(retain_graph=True)
+                matrix_loss.backward(retain_graph=True)
                 optimizer2.step()
 
             optimizer1.zero_grad()
-            loss.backward(retain_graph=True)
+            loss.backward()
             optimizer1.step()
 
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
