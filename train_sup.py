@@ -105,6 +105,7 @@ if args.variational:
         for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
             features = net(batch_imgs.cuda())
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
+            optimizer1.zero_grad()
 
             W = features.T
             Pi = tf.label_to_membership(batch_lbls.numpy(), trainset.num_classes)
@@ -115,7 +116,6 @@ if args.variational:
             optimizer2.step()
 
             net.module.U.weight.requires_grad = False
-            optimizer1.zero_grad()
             loss.backward()
             optimizer1.step()
             net.module.U.weight.requires_grad = True
