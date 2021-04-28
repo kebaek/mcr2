@@ -104,27 +104,18 @@ if args.variational:
     for epoch in range(args.epo):
         for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
             features = net(batch_imgs.cuda())
-            loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
-
             optimizer1.zero_grad()
-
-            W = features.T
-            Pi = tf.label_to_membership(batch_lbls.numpy(), trainset.num_classes)
-            Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
-            matrix_loss = criterion.compute_matrix_approx(W, Pi, net)
-            optimizer2.zero_grad()
-            matrix_loss.backward(retain_graph=True)
-            optimizer2.step()
-
+            loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
             loss.backward()
             optimizer1.step()
+
 
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
         print('Epoch %d'%epoch)
         print('Total %f'%loss)
-        print('Approx %f'%matrix_loss)
+        print('Approx %f'%loss_comp[2])
         scheduler1.step()
-        scheduler2.step()
+        #scheduler2.step()
         utils.save_ckpt(model_dir, net, epoch)
 else:
     for epoch in range(args.epo):

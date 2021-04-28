@@ -74,7 +74,7 @@ class MaximalCodingRateReduction(torch.nn.Module):
                 [discrimn_loss_theo.item(), compress_loss_theo.item()])
 
 class VariationalMaximalCodingRateReduction(torch.nn.Module):
-    def __init__(self, gam1=1.0, gam2=1.0, eps=0.01, mu=0.1):
+    def __init__(self, gam1=1.0, gam2=1.0, eps=0.01, mu=1.0):
         super(VariationalMaximalCodingRateReduction, self).__init__()
         self.gam1 = gam1
         self.gam2 = gam2
@@ -112,10 +112,8 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         U = net.module.U.weight
         U = torch.nn.functional.normalize(U)
         for j in range(k):
-            print(torch.norm(W.matmul(Pi[j]).matmul(W.T)))
-            print(torch.norm(U@torch.diag(A[:,j])@U.T))
-            norm = torch.norm(W.matmul(Pi[j]).matmul(W.T) - U@torch.diag(A[:,j])@U.T)
-            matrix_loss += norm**2
+            norm = torch.linalg.norm(W@Pi[j]@W.T - U@torch.diag(A[:,j])@U.T)
+            matrix_loss += norm
         return  self.mu * matrix_loss / 2.
 
 
@@ -130,6 +128,6 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         compress_loss_empi = self.compute_compress_loss_empirical(W, Pi, net)
         matrix_approx = self.compute_matrix_approx(W, Pi, net)
 
-        total_loss_empi = self.gam2 * -discrimn_loss_empi + compress_loss_empi
+        total_loss_empi = self.gam2 * -discrimn_loss_empi + compress_loss_empi + matrix_approx
         return (total_loss_empi,
                 [discrimn_loss_empi.item(), compress_loss_empi.item(), matrix_approx.item()])
