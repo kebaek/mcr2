@@ -131,7 +131,8 @@ if __name__ == '__main__':
     new_labels = trainset.targets
     trainloader = DataLoader(trainset, batch_size=200)
     train_features, train_labels = tf.get_features(net, trainloader)
-
+    np.save('train_features.npy', train_features.detach().cpu().numpy())
+    np.save('train_labels.npy', train_labels.detach().cpu().numpy())
     # get test features and labels
     test_transforms = tf.load_transforms('test')
     testset = tf.load_trainset(params['data'], test_transforms, train=False)

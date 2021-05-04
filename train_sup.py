@@ -115,7 +115,6 @@ if args.variational:
         print('Total %f'%loss)
         print('Approx %f'%loss_comp[2])
         scheduler1.step()
-        #scheduler2.step()
         utils.save_ckpt(model_dir, net, epoch)
 else:
     for epoch in range(args.epo):
