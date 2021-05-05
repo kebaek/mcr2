@@ -121,6 +121,7 @@ if args.variational:
                 loss.backward()
                 optimizer2.step()
 
+            features = net(batch_imgs.cuda())
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
 
