@@ -111,7 +111,6 @@ if args.variational:
                 loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
                 loss.backward()
                 optimizer1.step()
-                scheduler1.step()
             net.module.U.requires_grad = True
             net.module.A.requires_grad = True
 
@@ -121,10 +120,12 @@ if args.variational:
                 loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
                 loss.backward()
                 optimizer2.step()
-                scheduler2.step()
 
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
+
+        scheduler1.step()
+        scheduler2.step()
         print('Epoch %d'%epoch)
         print('Total %f'%loss)
         print('Approx %f'%loss_comp[2])
