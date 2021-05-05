@@ -94,7 +94,7 @@ if args.variational:
 else:
     criterion = MaximalCodingRateReduction(gam1=args.gam1, gam2=args.gam2, eps=args.eps)
 optimizer1 = optim.SGD(net.parameters(), lr=args.lr, momentum=args.mom, weight_decay=args.wd)
-optimizer2 = optim.SGD([net.module.U.weight], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
+optimizer2 = optim.SGD([net.module.U.weight, net.module.A.weight], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
 scheduler1 = lr_scheduler.MultiStepLR(optimizer1, [200, 400, 600], gamma=0.1)
 scheduler2 = lr_scheduler.MultiStepLR(optimizer2, [200, 400, 600], gamma=0.1)
 utils.save_params(model_dir, vars(args))
@@ -104,17 +104,30 @@ if args.variational:
     for epoch in range(args.epo):
         for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
             features = net(batch_imgs.cuda())
-            optimizer1.zero_grad()
+
+            net.module.U.requires_grad = False
+            net.module.A.requires_grad = False
+            for i in range(5):
+                optimizer1.zero_grad()
+                loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
+                loss.backward()
+                optimizer1.step()
+                scheduler1.step()
+            net.module.U.requires_grad = True
+            net.module.A.requires_grad = True
+
+            for i in range(5):
+                optimizer2.zero_grad()
+                loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
+                loss.backward()
+                optimizer1.step()
+                scheduler2.step()
+
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
-            loss.backward()
-            optimizer1.step()
-
-
             utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
         print('Epoch %d'%epoch)
         print('Total %f'%loss)
         print('Approx %f'%loss_comp[2])
-        scheduler1.step()
         utils.save_ckpt(model_dir, net, epoch)
 else:
     for epoch in range(args.epo):
