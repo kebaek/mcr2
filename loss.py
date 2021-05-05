@@ -113,9 +113,9 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         U = torch.nn.functional.normalize(U)
         r = torch.nn.ReLU()
         for j in range(k):
-            norm = torch.linalg.norm(W@Pi[j]@W.T - U@torch.diag(r(A[:,j]))@U.T)
+            norm = torch.sum((W@Pi[j]@W.T - U@torch.diag(r(A[:,j]))@U.T)**2)
             matrix_loss += norm
-        return  self.mu * matrix_loss / 2.
+        return  self.mu * matrix_loss / (k * 2)
 
 
     def forward(self, X, Y, net, num_classes=None):
