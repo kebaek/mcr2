@@ -115,9 +115,9 @@ if args.variational:
             net.module.U.requires_grad = True
             net.module.A.requires_grad = True
 
-            features = net(batch_imgs.cuda())
             for i in range(5):
                 optimizer2.zero_grad()
+                features = net(batch_imgs.cuda())
                 loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
                 loss.backward()
                 optimizer2.step()
