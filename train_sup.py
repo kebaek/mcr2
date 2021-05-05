@@ -120,7 +120,7 @@ if args.variational:
                 optimizer2.zero_grad()
                 loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
                 loss.backward()
-                optimizer1.step()
+                optimizer2.step()
                 scheduler2.step()
 
             loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
