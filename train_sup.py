@@ -103,12 +103,11 @@ utils.save_params(model_dir, vars(args))
 if args.variational:
     for epoch in range(args.epo):
         for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
-            features = net(batch_imgs.cuda())
-
             net.module.U.requires_grad = False
             net.module.A.requires_grad = False
             for i in range(5):
                 optimizer1.zero_grad()
+                features = net(batch_imgs.cuda())
                 loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
                 loss.backward()
                 optimizer1.step()
@@ -116,6 +115,7 @@ if args.variational:
             net.module.U.requires_grad = True
             net.module.A.requires_grad = True
 
+            features = net(batch_imgs.cuda())
             for i in range(5):
                 optimizer2.zero_grad()
                 loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
