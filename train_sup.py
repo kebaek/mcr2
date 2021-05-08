@@ -69,13 +69,16 @@ if args.variational:
                 'sup_var_{}+{}_r{}_mu{}_{}_epo{}_bs{}_lr{}_mom{}_wd{}_gam1{}_gam2{}_eps{}_lcr{}{}'.format(
                         args.arch, args.fd, args.r, args.mu, args.data, args.epo, args.bs, args.lr, args.mom,
                         args.wd, args.gam1, args.gam2, args.eps, args.lcr, args.tail))
+
+    headers = ["epoch", "step", "loss", "discrimn_loss", "compress_loss", "matrix_approx"]
+    utils.init_pipeline(model_dir, headers)
 else:
     model_dir = os.path.join(args.save_dir,
                 'sup_{}+{}_{}_epo{}_bs{}_lr{}_mom{}_wd{}_gam1{}_gam2{}_eps{}_lcr{}{}'.format(
                         args.arch, args.fd, args.data, args.epo, args.bs, args.lr, args.mom,
                         args.wd, args.gam1, args.gam2, args.eps, args.lcr, args.tail))
 
-utils.init_pipeline(model_dir)
+    utils.init_pipeline(model_dir)
 
 ## Prepare for Training
 if args.pretrain_dir is not None:
@@ -105,7 +108,7 @@ if args.variational:
         for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
             net.module.U.requires_grad = False
             net.module.A.requires_grad = False
-            for i in range(5):
+            for i in range(1):
                 optimizer1.zero_grad()
                 features = net(batch_imgs.cuda())
                 loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
@@ -114,7 +117,7 @@ if args.variational:
             net.module.U.requires_grad = True
             net.module.A.requires_grad = True
 
-            for i in range(5):
+            for i in range(1):
                 optimizer2.zero_grad()
                 features = net(batch_imgs.cuda())
                 loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)

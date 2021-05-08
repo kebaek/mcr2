@@ -112,7 +112,7 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         matrix_loss = 0.
         A = net.module.A.weight
         U = net.module.U.weight
-        U = torch.nn.functional.normalize(U)
+        U = torch.nn.functional.normalize(U, dim = 0)
         r = torch.nn.ReLU()
         for j in range(k):
             norm = torch.sum((W@Pi[j]@W.T - U@torch.diag(r(A[:,j]))@U.T)**2)
