@@ -113,7 +113,7 @@ net = nn.DataParallel(net).to(device)
 
 criterion_mcr2var = MCR2Variational(args.eps, args.param_reg)
 Us = nn.Parameter(
-    torch.randn(n_class, 9, 9).float(),
+    torch.randn(n_class, 9, 9).float() / 81.,
     requires_grad=True
     ).to(device)
 optimizer_net = optim.SGD(net.parameters(), lr=args.net_lr)
@@ -126,6 +126,9 @@ for epoch in range(args.epochs):
 
     # forward pass
     Z_train = net(X_train)
+    if epoch == 0:
+        for c in range(n_class):
+            Us.data[c] = torch.linalg.svd(Z_train.T @ Pi[:, c].diag() @ Z_train, full_matrices=True)[0]
     # Z_train = torch.zeros(400, 128).float()
     # Z_train[:200, :64] = 1.
     # Z_train[200:, 64:] = 1.
@@ -138,7 +141,7 @@ for epoch in range(args.epochs):
     optimizer_net.step()
     optimizer_Us.step()
 
-    if epoch % 5 == 0:
+    if epoch % 1 == 0:
         with torch.no_grad():
             Z_test = net(X_test)
         acc_train, acc_test = metrics_sup.nearsub(Z_train, y_train, Z_test, y_test, n_class, 1)
