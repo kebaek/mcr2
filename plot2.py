@@ -54,6 +54,43 @@ def plot_loss_mcr2(model_dir, filename='loss_mcr'):
     plt.close()
     print("Plot saved to: {}".format(file_name))
 
+def plot_loss_mcr2_2(model_dir, filename='loss_mcr'):
+    """Plot theoretical loss and empirical loss. """
+    ## extract loss from csv
+    file_dir = os.path.join(model_dir, 'csv', f'{filename}.csv')
+    data = pd.read_csv(file_dir)
+    loss_total = data['loss_total'].ravel()
+    loss_discrimn = data['loss_discrimn'].ravel()
+    loss_compress = data['loss_compress'].ravel()
+
+    ## Theoretical Loss
+    fig, ax = plt.subplots(1, 1, figsize=(7, 5), sharey=True, sharex=True, dpi=400)
+    num_iter = np.arange(len(loss_total))
+    ax.plot(num_iter, loss_discrimn - loss_compress, label=r'$\Delta R$', 
+                color='green', linewidth=1.0, alpha=0.8)
+    ax.plot(num_iter, loss_discrimn, label=r'$R$', 
+                color='royalblue', linewidth=1.0, alpha=0.8)
+    ax.plot(num_iter, loss_compress, label=r'$R^c$', 
+                color='coral', linewidth=1.0, alpha=0.8)
+    ax.plot(num_iter, loss_discrimn - loss_compress, label=r'$\Delta R$', 
+                color='black', linewidth=1.0, alpha=0.8) 
+    ax.set_ylabel('Loss')
+    ax.set_xlabel('Number of iterations')
+    ax.legend()
+    # ax.legend(loc='lower right', prop={"size": 15}, ncol=3, framealpha=0.5)
+    ax.set_title("MCR2 Loss")
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    plt.tight_layout()
+
+    ## create saving directory
+    loss_dir = os.path.join(model_dir, 'figures', 'loss')
+    os.makedirs(loss_dir, exist_ok=True)
+    file_name = os.path.join(loss_dir, 'loss_mcr2.png')
+    plt.savefig(file_name, dpi=400)
+    plt.close()
+    print("Plot saved to: {}".format(file_name))
+
 
 def plot_membership(model_dir, pi, name, title=''):
     save_dir = os.path.join(model_dir, 'figures', 'memberships')

@@ -16,43 +16,33 @@ import plot2 as plot
 import utils
 
 
-class MCR2Variational(nn.Module):
-    """Equation 9 in writeup. """
-    def __init__(self, eps, mu):
-        super(MCR2Variational, self).__init__()
+class MCR2(nn.Module):
+    """original mcr2 formulation"""
+    def __init__(self, eps):
+        super(MCR2, self).__init__()
         self.eps = eps
-        self.mu = mu
         
     def loss_discrimn(self, Z):
         d, n = Z.shape
         I = torch.eye(d).to(Z.device)
         return 0.5 * torch.logdet(I + d / (n * self.eps) * Z @ Z.T)
 
-    def loss_compress(self, Z, Pi, Us):
+    def loss_compress(self, Z, Pi):
         d, n = Z.shape
         I = torch.eye(d).to(Z.device)
         compress_loss = 0.
         for j in range(Pi.shape[1]):
             trPi_j = Pi[:, j].sum()
             scalar_j = trPi_j / (2 * n)
-            norms = torch.linalg.norm(Us[j], axis=0, keepdims=True, ord=2) ** 2
-            compress_loss += scalar_j * torch.log(1 + d / (trPi_j * self.eps) * norms).sum()
+            logdet_j = torch.logdet(I + d / (trPi_j * self.eps) *  Z @ Pi[:, j].diag() @ Z.T)
+            compress_loss += scalar_j * logdet_j
         return compress_loss
 
-    def reg_U(self, Z, Pi, Us):
-        loss_reg = 0.
-        for j in range(Us.shape[0]):
-            norm = torch.linalg.norm((Z @ Pi[:, j].diag() @ Z.T) - (Us[j] @ Us[j].T), ord='fro')
-            # print('reg norm', j, norm)
-            loss_reg += norm ** 2
-        return 0.5 * self.mu * loss_reg
-    
-    def forward(self, Z, Pi, Us):
+    def forward(self, Z, Pi):
         loss_R = self.loss_discrimn(Z.T)
-        loss_Rc = self.loss_compress(Z.T, Pi, Us)
-        loss_reg_U = self.reg_U(Z.T, Pi, Us)
-        loss_obj = loss_R - loss_Rc - loss_reg_U
-        return -loss_obj, loss_R.item(), loss_Rc.item(), loss_reg_U.item()
+        loss_Rc = self.loss_compress(Z.T, Pi)
+        loss_obj = loss_R - loss_Rc
+        return -loss_obj, loss_R.item(), loss_Rc.item()
 
 def label_to_membership(labels):
     n_class = labels.max() + 1
@@ -84,17 +74,15 @@ print('DEVICE:', device)
 
 ## Model Setup
 model_dir = os.path.join(args.save_dir,
-                            'sup_var',
+                            'sup_verify',
                             f'{args.data}+{args.arch}',
                             f'samples{args.samples}'
                             f'epochs{args.epochs}'
                             f'_eps{args.eps}'
                             f'_netlr{args.net_lr}'
-                            f'_paramlr{args.param_lr}'
-                            f'_paramreg{args.param_reg}'
                             f'{args.tail}')
 os.makedirs(model_dir, exist_ok=True)
-utils.create_csv(model_dir, 'loss_mcr', ['loss_total', 'loss_discrimn', 'loss_compress', 'loss_reg'])
+utils.create_csv(model_dir, 'loss_mcr', ['loss_total', 'loss_discrimn', 'loss_compress'])
 utils.create_csv(model_dir, 'acc_nearsub', ['epoch', 'acc_train', 'acc_test'])
 utils.save_params(model_dir, vars(args))
 print(model_dir)
@@ -110,44 +98,23 @@ Pi = label_to_membership(y_train)
 
 net = L.load_arch(args.data, args.arch)
 net = nn.DataParallel(net).to(device)
-init_Us = []
-with torch.no_grad():
-    Z_train = net(X_train)
-    for j in range(n_class):
-        U, S, _ = torch.linalg.svd(Z_train.T @ Pi[:, j].diag() @ Z_train, full_matrices=True)
-        init_Us.append(U @ (S**0.5).diag())
-init_Us = torch.stack(init_Us)
-criterion_mcr2var = MCR2Variational(args.eps, args.param_reg)
-# Us = nn.Parameter(
-#     tF.normalize(torch.randn(n_class, 128, 128).float() / 128**2., dim=0), 
-#     requires_grad=True
-#     ).to(device)
-# Us = nn.Parameter(
-#     tF.normalize(torch.randn(n_class, 20, 20).float() / 20**2., dim=0), 
-#     requires_grad=True
-#     ).to(device)
-Us = nn.Parameter(
-    tF.normalize(init_Us, dim=0), 
-    requires_grad=True
-    ).to(device)
-optimizer_net = optim.SGD(net.parameters(), lr=args.net_lr)
-# optimizer_net = optim.Adadelta(net.parameters(), lr=args.net_lr)
-optimizer_Us = optim.SGD([Us], lr=args.param_lr)
+
+criterion_mcr2var = MCR2(eps=args.eps)
+# optimizer_net = optim.SGD(net.parameters(), lr=args.net_lr)
+optimizer_net = optim.Adadelta(net.parameters(), lr=args.net_lr)
 
 ## Training
 for epoch in range(args.epochs):
     optimizer_net.zero_grad()
-    optimizer_Us.zero_grad()
 
     # forward pass
     Z_train = net(X_train)
-    loss_obj, loss_R, loss_Rc, loss_reg_U = criterion_mcr2var(Z_train, Pi, Us)
-    utils.append_csv(model_dir, 'loss_mcr', [-loss_obj.item(), loss_R, loss_Rc, loss_reg_U])
-    print(epoch, -loss_obj.item(), loss_R, loss_Rc, loss_reg_U)
+    loss_obj, loss_R, loss_Rc = criterion_mcr2var(Z_train, Pi)
+    utils.append_csv(model_dir, 'loss_mcr', [-loss_obj.item(), loss_R, loss_Rc])
+    print(epoch, loss_obj.item(), loss_R, loss_Rc)
 
     loss_obj.backward()
     optimizer_net.step()
-    optimizer_Us.step()
 
     if epoch % 10 == 0:
         with torch.no_grad():
@@ -155,15 +122,4 @@ for epoch in range(args.epochs):
         acc_train, acc_test = metrics_sup.nearsub(Z_train, y_train, Z_test, y_test, n_class, 1)
         plot.plot_heatmap(model_dir, Z_train.detach(), y_train.detach(), n_class, f'Ztrain{epoch}')
         # plot.plot_heatmap(model_dir, Z_test.detach(), y_test.detach(), n_class, f'Ztest{epoch}')
-        plot.plot_loss_mcr2(model_dir, filename='loss_mcr')
         plot.plot_loss_mcr2_2(model_dir, filename='loss_mcr')
-        utils.save_array(model_dir, Us.detach().cpu(), f'Us_epoch{epoch}', 'Us')
-        # print(np.sum(Us.detach().cpu().numpy()[0] < 0), np.sum(Us.detach().cpu().numpy()[0] > 0))
-        # print(Us.detach().cpu().numpy()[0])
-
-        for c in range(n_class):
-            # print(Us.detach().cpu().numpy()[c])
-            plot.plot_array(model_dir, Us.detach().cpu().numpy()[c], f'U{c}')
-
-    # if epoch % 50 == 0:
-    #     criterion_mcr2var.mu = criterion_mcr2var.mu * 10

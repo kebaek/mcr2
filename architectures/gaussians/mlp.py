@@ -30,10 +30,10 @@ class MLP(nn.Module):
             # nn.BatchNorm1d(16),
             # nn.ReLU(),
             # nn.Linear(16, 16),
-            nn.Linear(3, 9),
+            nn.Linear(3, 20),
             # nn.BatchNorm1d(3),
             nn.ReLU(),
-            nn.Linear(9, 9),
+            nn.Linear(20, 20),
             # nn.ReLU()
         )
 

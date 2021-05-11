@@ -41,16 +41,14 @@ class MCR2Variational(nn.Module):
 
     def reg_U(self, Z, Pi, Us):
         loss_reg = 0.
-        for j in range(Us.shape[0]):
-            norm = torch.linalg.norm((Z @ Pi[:, j].diag() @ Z.T) - (Us[j] @ Us[j].T), ord='fro')
-            # print('reg norm', j, norm)
-            loss_reg += norm ** 2
-        return 0.5 * self.mu * loss_reg
+        for j in range(Pi.shape[1]):
+            loss_reg += torch.linalg.norm((Z @ Pi[:, j].diag() @ Z.T) - (Us[j] @ Us[j].T), ord='fro') ** 2
+        return 0.5 * loss_reg
     
     def forward(self, Z, Pi, Us):
         loss_R = self.loss_discrimn(Z.T)
         loss_Rc = self.loss_compress(Z.T, Pi, Us)
-        loss_reg_U = self.reg_U(Z.T, Pi, Us)
+        loss_reg_U = self.mu * self.reg_U(Z.T, Pi, Us)
         loss_obj = loss_R - loss_Rc - loss_reg_U
         return -loss_obj, loss_R.item(), loss_Rc.item(), loss_reg_U.item()
 
@@ -84,7 +82,7 @@ print('DEVICE:', device)
 
 ## Model Setup
 model_dir = os.path.join(args.save_dir,
-                            'sup_var',
+                            'sup_var_alternate',
                             f'{args.data}+{args.arch}',
                             f'samples{args.samples}'
                             f'epochs{args.epochs}'
@@ -110,28 +108,18 @@ Pi = label_to_membership(y_train)
 
 net = L.load_arch(args.data, args.arch)
 net = nn.DataParallel(net).to(device)
-init_Us = []
-with torch.no_grad():
-    Z_train = net(X_train)
-    for j in range(n_class):
-        U, S, _ = torch.linalg.svd(Z_train.T @ Pi[:, j].diag() @ Z_train, full_matrices=True)
-        init_Us.append(U @ (S**0.5).diag())
-init_Us = torch.stack(init_Us)
+
 criterion_mcr2var = MCR2Variational(args.eps, args.param_reg)
 # Us = nn.Parameter(
 #     tF.normalize(torch.randn(n_class, 128, 128).float() / 128**2., dim=0), 
 #     requires_grad=True
 #     ).to(device)
-# Us = nn.Parameter(
-#     tF.normalize(torch.randn(n_class, 20, 20).float() / 20**2., dim=0), 
-#     requires_grad=True
-#     ).to(device)
 Us = nn.Parameter(
-    tF.normalize(init_Us, dim=0), 
+    tF.normalize(torch.randn(n_class, 20, 20).float() / 20**2., dim=0), 
     requires_grad=True
     ).to(device)
-optimizer_net = optim.SGD(net.parameters(), lr=args.net_lr)
-# optimizer_net = optim.Adadelta(net.parameters(), lr=args.net_lr)
+# optimizer_net = optim.SGD(net.parameters(), lr=args.net_lr)
+optimizer_net = optim.Adadelta(net.parameters(), lr=args.net_lr)
 optimizer_Us = optim.SGD([Us], lr=args.param_lr)
 
 ## Training
@@ -147,7 +135,12 @@ for epoch in range(args.epochs):
 
     loss_obj.backward()
     optimizer_net.step()
-    optimizer_Us.step()
+
+    for step in range(10):
+        optimizer_Us.zero_grad()
+        loss_obj, loss_R, loss_Rc, loss_reg_U = criterion_mcr2var(Z_train.detach(), Pi, Us)
+        loss_obj.backward()
+        optimizer_Us.step()
 
     if epoch % 10 == 0:
         with torch.no_grad():
