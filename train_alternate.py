@@ -110,12 +110,15 @@ net = L.load_arch(args.data, args.arch)
 net = nn.DataParallel(net).to(device)
 
 criterion_mcr2var = MCR2Variational(args.eps, args.param_reg)
-# Us = nn.Parameter(
-#     tF.normalize(torch.randn(n_class, 128, 128).float() / 128**2., dim=0), 
-#     requires_grad=True
-#     ).to(device)
+init_Us = []    
+with torch.no_grad():
+    Z_train = net(X_train)
+    for j in range(n_class):
+        U, S, _ = torch.linalg.svd(Z_train.T @ Pi[:, j].diag() @ Z_train)
+        init_Us.append(U @ (S**0.5).diag())
+init_Us = torch.stack(init_Us)
 Us = nn.Parameter(
-    tF.normalize(torch.randn(n_class, 20, 20).float() / 20**2., dim=0), 
+    init_Us, 
     requires_grad=True
     ).to(device)
 # optimizer_net = optim.SGD(net.parameters(), lr=args.net_lr)
@@ -136,7 +139,7 @@ for epoch in range(args.epochs):
     loss_obj.backward()
     optimizer_net.step()
 
-    for step in range(10):
+    for step in range(1):
         optimizer_Us.zero_grad()
         loss_obj, loss_R, loss_Rc, loss_reg_U = criterion_mcr2var(Z_train.detach(), Pi, Us)
         loss_obj.backward()

@@ -114,20 +114,12 @@ init_Us = []
 with torch.no_grad():
     Z_train = net(X_train)
     for j in range(n_class):
-        U, S, _ = torch.linalg.svd(Z_train.T @ Pi[:, j].diag() @ Z_train, full_matrices=True)
+        U, S, _ = torch.linalg.svd(Z_train.T @ Pi[:, j].diag() @ Z_train)
         init_Us.append(U @ (S**0.5).diag())
 init_Us = torch.stack(init_Us)
 criterion_mcr2var = MCR2Variational(args.eps, args.param_reg)
-# Us = nn.Parameter(
-#     tF.normalize(torch.randn(n_class, 128, 128).float() / 128**2., dim=0), 
-#     requires_grad=True
-#     ).to(device)
-# Us = nn.Parameter(
-#     tF.normalize(torch.randn(n_class, 20, 20).float() / 20**2., dim=0), 
-#     requires_grad=True
-#     ).to(device)
 Us = nn.Parameter(
-    tF.normalize(init_Us, dim=0), 
+    init_Us, 
     requires_grad=True
     ).to(device)
 optimizer_net = optim.SGD(net.parameters(), lr=args.net_lr)
@@ -149,7 +141,7 @@ for epoch in range(args.epochs):
     optimizer_net.step()
     optimizer_Us.step()
 
-    if epoch % 10 == 0:
+    if epoch % 1 == 0:
         with torch.no_grad():
             Z_test = net(X_test)
         acc_train, acc_test = metrics_sup.nearsub(Z_train, y_train, Z_test, y_test, n_class, 1)
@@ -158,12 +150,6 @@ for epoch in range(args.epochs):
         plot.plot_loss_mcr2(model_dir, filename='loss_mcr')
         plot.plot_loss_mcr2_2(model_dir, filename='loss_mcr')
         utils.save_array(model_dir, Us.detach().cpu(), f'Us_epoch{epoch}', 'Us')
-        # print(np.sum(Us.detach().cpu().numpy()[0] < 0), np.sum(Us.detach().cpu().numpy()[0] > 0))
-        # print(Us.detach().cpu().numpy()[0])
 
         for c in range(n_class):
-            # print(Us.detach().cpu().numpy()[c])
             plot.plot_array(model_dir, Us.detach().cpu().numpy()[c], f'U{c}')
-
-    # if epoch % 50 == 0:
-    #     criterion_mcr2var.mu = criterion_mcr2var.mu * 10

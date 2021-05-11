@@ -38,7 +38,7 @@ def plot_loss_mcr2(model_dir, filename='loss_mcr'):
     ax.plot(num_iter, loss_reg, label=r'$0.5*\gamma||\cdot||^2$', 
                 color='purple', linewidth=1.0, alpha=0.8)
     ax.set_ylabel('Loss')
-    ax.set_xlabel('Number of iterations')
+    ax.set_xlabel('Epochs')
     ax.legend()
     # ax.legend(loc='lower right', prop={"size": 15}, ncol=3, framealpha=0.5)
     ax.set_title("MCR2 Loss")
@@ -72,10 +72,8 @@ def plot_loss_mcr2_2(model_dir, filename='loss_mcr'):
                 color='royalblue', linewidth=1.0, alpha=0.8)
     ax.plot(num_iter, loss_compress, label=r'$R^c$', 
                 color='coral', linewidth=1.0, alpha=0.8)
-    ax.plot(num_iter, loss_discrimn - loss_compress, label=r'$\Delta R$', 
-                color='black', linewidth=1.0, alpha=0.8) 
     ax.set_ylabel('Loss')
-    ax.set_xlabel('Number of iterations')
+    ax.set_xlabel('Epochs')
     ax.legend()
     # ax.legend(loc='lower right', prop={"size": 15}, ncol=3, framealpha=0.5)
     ax.set_title("MCR2 Loss")
