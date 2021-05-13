@@ -134,3 +134,13 @@ class VariationalMaximalCodingRateReduction(torch.nn.Module):
         total_loss_empi = self.gam2 * -discrimn_loss_empi + compress_loss_empi + matrix_approx
         return (total_loss_empi,
                 [discrimn_loss_empi.item(), compress_loss_empi.item(), matrix_approx.item()])
+
+
+def label_to_membership(labels):
+    n_class = labels.max() + 1
+    n_samples = labels.shape[0]
+    membership = torch.zeros(n_samples, n_class)
+    for j in range(n_class):
+        idx_j = labels == j
+        membership[idx_j, j] = 1.
+    return membership
