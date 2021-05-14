@@ -55,30 +55,15 @@ parser.add_argument('--pretrain_dir', type=str, default=None,
                     help='load pretrained checkpoint for assigning labels')
 parser.add_argument('--pretrain_epo', type=int, default=None,
                     help='load pretrained epoch for assigning labels')
-parser.add_argument('--variational', default=False, action='store_true')
-parser.add_argument('--r', type=int, default=128,
-                    help='rank parameter in variational form (default: 128)')
-parser.add_argument('--mu', type=float, default=1.,
-                    help='mu parameter in variational form (default: 1.)')
 args = parser.parse_args()
 
 
-## Pipelines Setup
-if args.variational:
-    model_dir = os.path.join(args.save_dir,
-                'sup_var_{}+{}_r{}_mu{}_{}_epo{}_bs{}_lr{}_mom{}_wd{}_gam1{}_gam2{}_eps{}_lcr{}{}'.format(
-                        args.arch, args.fd, args.r, args.mu, args.data, args.epo, args.bs, args.lr, args.mom,
-                        args.wd, args.gam1, args.gam2, args.eps, args.lcr, args.tail))
+model_dir = os.path.join(args.save_dir,
+            'sup_{}+{}_{}_epo{}_bs{}_lr{}_mom{}_wd{}_gam1{}_gam2{}_eps{}_lcr{}{}'.format(
+                    args.arch, args.fd, args.data, args.epo, args.bs, args.lr, args.mom,
+                    args.wd, args.gam1, args.gam2, args.eps, args.lcr, args.tail))
 
-    headers = ["epoch", "step", "loss", "discrimn_loss", "compress_loss", "matrix_approx"]
-    utils.init_pipeline(model_dir, headers)
-else:
-    model_dir = os.path.join(args.save_dir,
-                'sup_{}+{}_{}_epo{}_bs{}_lr{}_mom{}_wd{}_gam1{}_gam2{}_eps{}_lcr{}{}'.format(
-                        args.arch, args.fd, args.data, args.epo, args.bs, args.lr, args.mom,
-                        args.wd, args.gam1, args.gam2, args.eps, args.lcr, args.tail))
-
-    utils.init_pipeline(model_dir)
+utils.init_pipeline(model_dir)
 
 ## Prepare for Training
 if args.pretrain_dir is not None:
@@ -91,59 +76,15 @@ trainset = tf.load_trainset(args.data, transforms, path=args.data_dir)
 trainset = tf.corrupt_labels(args.corrupt)(trainset, args.lcr, args.lcs)
 trainloader = DataLoader(trainset, batch_size=args.bs, drop_last=True, num_workers=4)
 
-if args.variational:
-    print("Using variational MCR2 objective")
-    criterion = VariationalMaximalCodingRateReduction(gam1=args.gam1, gam2=args.gam2, eps=args.eps, mu=args.mu)
-else:
-    criterion = MaximalCodingRateReduction(gam1=args.gam1, gam2=args.gam2, eps=args.eps)
-optimizer1 = optim.SGD(net.parameters(), lr=args.lr, momentum=args.mom, weight_decay=args.wd)
-optimizer2 = optim.SGD([net.module.U.weight, net.module.A.weight], lr=args.lr, momentum=args.mom, weight_decay=args.wd)
-scheduler1 = lr_scheduler.MultiStepLR(optimizer1, [200, 400, 600], gamma=0.1)
-scheduler2 = lr_scheduler.MultiStepLR(optimizer2, [200, 400, 600], gamma=0.1)
-utils.save_params(model_dir, vars(args))
+for epoch in range(args.epo):
+    for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
+        features = net(batch_imgs.cuda())
+        loss, loss_empi, loss_theo = criterion(features, batch_lbls, num_classes=trainset.num_classes)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-## Training
-if args.variational:
-    for epoch in range(args.epo):
-        for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
-            net.module.U.requires_grad = False
-            net.module.A.requires_grad = False
-            for i in range(1):
-                optimizer1.zero_grad()
-                features = net(batch_imgs.cuda())
-                loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
-                loss.backward()
-                optimizer1.step()
-            net.module.U.requires_grad = True
-            net.module.A.requires_grad = True
-
-            for i in range(1):
-                optimizer2.zero_grad()
-                features = net(batch_imgs.cuda())
-                loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
-                loss.backward()
-                optimizer2.step()
-
-            features = net(batch_imgs.cuda())
-            loss, loss_comp = criterion(features, batch_lbls, net, num_classes=trainset.num_classes)
-            utils.save_state(model_dir, epoch, step, loss.item(), *loss_comp)
-
-        scheduler1.step()
-        scheduler2.step()
-        print('Epoch %d'%epoch)
-        print('Total %f'%loss)
-        print('Approx %f'%loss_comp[2])
-        utils.save_ckpt(model_dir, net, epoch)
-else:
-    for epoch in range(args.epo):
-        for step, (batch_imgs, batch_lbls) in enumerate(trainloader):
-            features = net(batch_imgs.cuda())
-            loss, loss_empi, loss_theo = criterion(features, batch_lbls, num_classes=trainset.num_classes)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            utils.save_state(model_dir, epoch, step, loss.item(), *loss_empi, *loss_theo)
-        scheduler.step()
-        utils.save_ckpt(model_dir, net, epoch)
+        utils.save_state(model_dir, epoch, step, loss.item(), *loss_empi, *loss_theo)
+    scheduler.step()
+    utils.save_ckpt(model_dir, net, epoch)
 print("training complete.")

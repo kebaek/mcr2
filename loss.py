@@ -73,68 +73,6 @@ class MaximalCodingRateReduction(torch.nn.Module):
                 [discrimn_loss_empi.item(), compress_loss_empi.item()],
                 [discrimn_loss_theo.item(), compress_loss_theo.item()])
 
-class VariationalMaximalCodingRateReduction(torch.nn.Module):
-    def __init__(self, gam1=1.0, gam2=1.0, eps=0.01, mu=1.0):
-        super(VariationalMaximalCodingRateReduction, self).__init__()
-        self.gam1 = gam1
-        self.gam2 = gam2
-        self.eps = eps
-        self.mu = mu
-    def compute_discrimn_loss_empirical(self, W):
-        """Empirical Discriminative Loss."""
-        p, m = W.shape
-        I = torch.eye(p).cuda()
-        scalar = p / (m * self.eps)
-        logdet = torch.logdet(I + self.gam1 * scalar * W.matmul(W.T))
-        return logdet / 2.
-
-    def compute_compress_loss_empirical(self, W, Pi, net):
-        """Empirical Compressive Loss."""
-        p, m = W.shape
-        k, _, _ = Pi.shape
-        I = torch.eye(p).cuda()
-        compress_loss = 0.
-        A = net.module.A.weight
-        r = torch.nn.ReLU()
-        A = r(A)
-        ones = torch.ones(A.shape[1]).cuda()
-        for j in range(k):
-            trPi = torch.trace(Pi[j]) + 1e-8
-            scalar = p / (trPi * self.eps)
-            log_det = torch.sum(ones + scalar * A[j])
-            compress_loss += log_det * trPi / m
-        return compress_loss / 2.
-
-    def compute_matrix_approx(self, W, Pi, net):
-        p, m = W.shape
-        k, _, _ = Pi.shape
-        I = torch.eye(p).cuda()
-        matrix_loss = 0.
-        A = net.module.A.weight
-        U = net.module.U.weight
-        U = torch.nn.functional.normalize(U, dim = 0)
-        r = torch.nn.ReLU()
-        for j in range(k):
-            norm = torch.sum((W@Pi[j]@W.T - U@torch.diag(r(A[:,j]))@U.T)**2)
-            matrix_loss += norm
-        return  self.mu * matrix_loss / (k * 2)
-
-
-    def forward(self, X, Y, net, num_classes=None):
-        if num_classes is None:
-            num_classes = Y.max() + 1
-        W = X.T
-        Pi = tf.label_to_membership(Y.numpy(), num_classes)
-        Pi = torch.tensor(Pi, dtype=torch.float32).cuda()
-
-        discrimn_loss_empi = self.compute_discrimn_loss_empirical(W)
-        compress_loss_empi = self.compute_compress_loss_empirical(W, Pi, net)
-        matrix_approx = self.compute_matrix_approx(W, Pi, net)
-
-        total_loss_empi = self.gam2 * -discrimn_loss_empi + compress_loss_empi + matrix_approx
-        return (total_loss_empi,
-                [discrimn_loss_empi.item(), compress_loss_empi.item(), matrix_approx.item()])
-
 
 def label_to_membership(labels):
     n_class = labels.max() + 1
