@@ -165,7 +165,7 @@ for epoch in range(args.epochs):
     true_loss, loss_empi, loss_theo = criterion(Z_train, Pi, num_classes=trainset.num_classes)
     utils.append_csv(model_dir, 'loss_var', [-loss_obj.item(), loss_R, loss_Rc, loss_reg_U])
     print(epoch, -loss_obj.item(), loss_R, loss_Rc, loss_reg_U)
-    utils.append_csv(model_dir, 'loss_true', [-loss_obj.item(), loss_R, loss_Rc, loss_reg_U])
+    utils.append_csv(model_dir, 'loss_true', [-true_loss.item(), loss_empi[0], loss_empi[1]])
     print(epoch, -loss_obj.item(), loss_empi[0], loss_empi[1])
 
 
@@ -178,9 +178,9 @@ for epoch in range(args.epochs):
         loss_obj.backward()
         optimizer_UA.step()
 
-    if epoch % 200 == 0:
-        with torch.no_grad():
-            Z_test = net(X_test)
+    # if epoch % 200 == 0:
+        # with torch.no_grad():
+        #     Z_test = net(X_test)
         #acc_train, acc_test = metrics_sup.nearsub(Z_train, y_train, Z_test, y_test, n_class, 1)
         #plot.plot_heatmap(model_dir, Z_train.detach(), y_train.detach(), n_class, f'Ztrain{epoch}')
         # plot.plot_heatmap(model_dir, Z_test.detach(), y_test.detach(), n_class, f'Ztest{epoch}')
